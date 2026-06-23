@@ -9,6 +9,11 @@ let limePointLight, indigoPointLight;
 
 let lastTime = Date.now();
 
+// GLB Model Orientation Offset (Y-axis rotation in radians)
+// Change this if the model is not facing forward by default.
+// Standard choices: 0, Math.PI (180°), Math.PI/2 (90°), -Math.PI/2 (-90°)
+const GLB_ROTATION_Y = -Math.PI / 2;
+
 // Mouse Tracking Variables
 let mouseX = 0;
 let mouseY = 0;
@@ -29,6 +34,14 @@ function init() {
     console.error('Canvas container element not found.');
     return;
   }
+
+  // Initialize eye/eyelid variables as dummy Object3Ds to prevent crashes
+  leftEyeball = new THREE.Object3D();
+  rightEyeball = new THREE.Object3D();
+  leftUpperLid = new THREE.Object3D();
+  leftLowerLid = new THREE.Object3D();
+  rightUpperLid = new THREE.Object3D();
+  rightLowerLid = new THREE.Object3D();
 
   // Handle absolute layout size delay using offsets with viewport fallback
   width = container.clientWidth || container.offsetWidth || window.innerWidth * 0.45;
@@ -130,304 +143,108 @@ function setupLights() {
   indigoPointLight.add(new THREE.Mesh(orbGeo, indigoOrbMat));
 }
 
-// --- PROCEDURAL HUMAN BUST CENTERPIECE ---
+// --- LOAD GLB MODEL CENTERPIECE ---
 function buildRobotHead() {
-  // Premium Materials (Glossy white plastic casing + dark metal joints + glowing neon rings)
-  const whiteGlossyMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff,
-    roughness: 0.08,
-    metalness: 0.05,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.05
-  });
-
-  const darkMetalMat = new THREE.MeshPhysicalMaterial({
-    color: 0x141416,
-    roughness: 0.35,
-    metalness: 0.85,
-    clearcoat: 0.2
-  });
-
-  const glowingGreenMat = new THREE.MeshBasicMaterial({
-    color: 0xB3FC6A
-  });
-
-  const darkSeamMat = new THREE.MeshBasicMaterial({
-    color: 0x0f0f12
-  });
-
-  // --- 1. HEAD MAIN SHELL & FACE ---
-  // Cranium (Sleek robot helmet head casing)
-  const craniumGeo = new THREE.SphereGeometry(1.58, 64, 64);
-  const cranium = new THREE.Mesh(craniumGeo, whiteGlossyMat);
-  cranium.scale.set(1.0, 1.04, 1.0);
-  cranium.position.set(0, 0.4, 0);
-  cranium.castShadow = true;
-  cranium.receiveShadow = true;
-  robotGroup.add(cranium);
-
-  // Recessed Face area (sleek white face mask)
-  const faceGeo = new THREE.SphereGeometry(1.5, 64, 64);
-  const face = new THREE.Mesh(faceGeo, whiteGlossyMat);
-  face.scale.set(0.96, 0.98, 0.98);
-  face.position.set(0, 0.36, 0.08);
-  face.castShadow = true;
-  robotGroup.add(face);
-
-  // Soft cheeks & chin for cute organic shapes
-  const cheekL = new THREE.Mesh(new THREE.SphereGeometry(0.3, 32, 32), whiteGlossyMat);
-  cheekL.position.set(-0.42, 0.08, 1.34);
-  cheekL.scale.set(1.0, 1.0, 0.6);
-  robotGroup.add(cheekL);
-
-  const cheekR = new THREE.Mesh(new THREE.SphereGeometry(0.3, 32, 32), whiteGlossyMat);
-  cheekR.position.set(0.42, 0.08, 1.34);
-  cheekR.scale.set(1.0, 1.0, 0.6);
-  robotGroup.add(cheekR);
-
-  const chin = new THREE.Mesh(new THREE.SphereGeometry(0.24, 32, 32), whiteGlossyMat);
-  chin.position.set(0, -0.22, 1.36);
-  chin.scale.set(1.0, 0.8, 0.8);
-  robotGroup.add(chin);
-
-  // --- 2. BLACK PANEL SEAMS (Curved grooves mapping to reference image) ---
-  // Seam 1: Vertical crown wrapping
-  const seam1 = new THREE.Mesh(new THREE.TorusGeometry(1.595, 0.012, 8, 64), darkSeamMat);
-  seam1.rotation.y = Math.PI / 2;
-  seam1.position.set(0, 0.4, 0);
-  robotGroup.add(seam1);
-
-  // Seam 2: Forehead curve seam
-  const seamForehead = new THREE.Mesh(new THREE.TorusGeometry(1.595, 0.012, 8, 64, Math.PI), darkSeamMat);
-  seamForehead.rotation.x = Math.PI / 10;
-  seamForehead.position.set(0, 0.4, 0);
-  robotGroup.add(seamForehead);
-
-  // Seam 3: Back skull crown seam
-  const seamBack = new THREE.Mesh(new THREE.TorusGeometry(1.595, 0.012, 8, 64, Math.PI), darkSeamMat);
-  seamBack.rotation.x = -Math.PI / 3.5;
-  seamBack.position.set(0, 0.4, 0);
-  robotGroup.add(seamBack);
-
-  // Seam 4: Longitudinal center seam
-  const seamCenter = new THREE.Mesh(new THREE.TorusGeometry(1.595, 0.012, 8, 64, Math.PI), darkSeamMat);
-  seamCenter.rotation.set(Math.PI / 5, Math.PI / 2, 0);
-  seamCenter.position.set(0, 0.4, 0);
-  robotGroup.add(seamCenter);
-
-  // --- 3. CYBERNETIC EARPIECES ---
-  // Left Ear
-  const earL = new THREE.Group();
-  earL.position.set(-1.6, 0.46, 0);
-  earL.rotation.z = Math.PI / 2;
-  robotGroup.add(earL);
-
-  const earLWhite = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.12, 32), whiteGlossyMat);
-  earLWhite.castShadow = true;
-  earL.add(earLWhite);
-
-  const earLDark = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.15, 32), darkMetalMat);
-  earLDark.position.y = 0.02;
-  earL.add(earLDark);
-
-  const earLGlow = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.04, 8, 32), glowingGreenMat);
-  earLGlow.position.y = 0.1;
-  earLGlow.rotation.x = Math.PI / 2;
-  earL.add(earLGlow);
-
-  const earLWhiteCore = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.16, 32), whiteGlossyMat);
-  earLWhiteCore.position.y = 0.03;
-  earL.add(earLWhiteCore);
-
-  // Right Ear
-  const earR = new THREE.Group();
-  earR.position.set(1.6, 0.46, 0);
-  earR.rotation.z = -Math.PI / 2;
-  robotGroup.add(earR);
-
-  const earRWhite = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.12, 32), whiteGlossyMat);
-  earRWhite.castShadow = true;
-  earR.add(earRWhite);
-
-  const earRDark = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.15, 32), darkMetalMat);
-  earRDark.position.y = 0.02;
-  earR.add(earRDark);
-
-  const earRGlow = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.04, 8, 32), glowingGreenMat);
-  earRGlow.position.y = 0.1;
-  earRGlow.rotation.x = Math.PI / 2;
-  earR.add(earRGlow);
-
-  const earRWhiteCore = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.16, 32), whiteGlossyMat);
-  earRWhiteCore.position.y = 0.03;
-  earR.add(earRWhiteCore);
-
-  // --- 4. CUTE FACE DETAILS ---
-  // Tiny button nose
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.065, 16, 16), whiteGlossyMat);
-  nose.position.set(0, 0.08, 1.49);
-  robotGroup.add(nose);
-
-  // Smiling mouth line (U-shape curve)
-  const mouthArc = Math.PI / 1.4;
-  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.014, 8, 24, mouthArc), darkMetalMat);
-  mouth.position.set(0, -0.06, 1.47);
-  mouth.rotation.set(0, 0, Math.PI + (Math.PI - mouthArc) / 2);
-  robotGroup.add(mouth);
-
-  // --- 5. BIG EXPRESSIVE GLASS EYES & TRACKING ---
-  const eyeRadius = 0.29; // Large, friendly eyeballs
-  const eyeballGeo = new THREE.SphereGeometry(eyeRadius, 32, 32);
-  const eyeballMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfafafa,
-    roughness: 0.05,
-    metalness: 0.1,
-    clearcoat: 1.0
-  });
-
-  const irisGeo = new THREE.SphereGeometry(0.2, 32, 16, 0, Math.PI * 2, 0, 0.6);
-  const irisMat = new THREE.MeshPhysicalMaterial({
-    color: 0x3d4b58,        // Slate grey-blue iris
-    roughness: 0.1,
-    metalness: 0.2
-  });
-
-  const pupilGeo = new THREE.SphereGeometry(0.095, 32, 16, 0, Math.PI * 2, 0, 0.45);
-  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-
-  // Cornea glass overlay for rich specular highlights
-  const corneaGeo = new THREE.SphereGeometry(eyeRadius + 0.008, 32, 32);
-  const corneaMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff,
-    roughness: 0.0,
-    transmission: 1.0,
-    ior: 1.5,
-    thickness: 0.1,
-    transparent: true
-  });
-
-  // Left Eye Setup
-  const leftEyeCenter = new THREE.Vector3(-0.44, 0.38, 1.25);
-  leftEyeball = new THREE.Group();
-  leftEyeball.position.copy(leftEyeCenter);
-  eyeGroup.add(leftEyeball);
-
-  leftEyeball.add(new THREE.Mesh(eyeballGeo, eyeballMat));
-  
-  const leftIris = new THREE.Mesh(irisGeo, irisMat);
-  leftIris.position.set(0, 0, 0.15);
-  leftIris.rotation.x = Math.PI / 2;
-  leftEyeball.add(leftIris);
-
-  const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
-  leftPupil.position.set(0, 0, 0.25);
-  leftPupil.rotation.x = Math.PI / 2;
-  leftEyeball.add(leftPupil);
-
-  const leftCornea = new THREE.Mesh(corneaGeo, corneaMat);
-  leftEyeball.add(leftCornea);
-
-  // Right Eye Setup
-  const rightEyeCenter = new THREE.Vector3(0.44, 0.38, 1.25);
-  rightEyeball = new THREE.Group();
-  rightEyeball.position.copy(rightEyeCenter);
-  eyeGroup.add(rightEyeball);
-
-  rightEyeball.add(new THREE.Mesh(eyeballGeo, eyeballMat));
-
-  const rightIris = new THREE.Mesh(irisGeo, irisMat);
-  rightIris.position.set(0, 0, 0.15);
-  rightIris.rotation.x = Math.PI / 2;
-  rightEyeball.add(rightIris);
-
-  const rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
-  rightPupil.position.set(0, 0, 0.25);
-  rightPupil.rotation.x = Math.PI / 2;
-  rightEyeball.add(rightPupil);
-
-  const rightCornea = new THREE.Mesh(corneaGeo, corneaMat);
-  rightEyeball.add(rightCornea);
-
-  // Eye socket borders (eyelids rims) to frame eyeballs organically
-  const eyeBorderGeo = new THREE.TorusGeometry(0.32, 0.024, 8, 32);
-  
-  const leftEyeBorder = new THREE.Mesh(eyeBorderGeo, whiteGlossyMat);
-  leftEyeBorder.position.set(-0.44, 0.38, 1.35);
-  leftEyeBorder.rotation.set(0, 0.08, 0);
-  robotGroup.add(leftEyeBorder);
-
-  const rightEyeBorder = new THREE.Mesh(eyeBorderGeo, whiteGlossyMat);
-  rightEyeBorder.position.set(0.44, 0.38, 1.35);
-  rightEyeBorder.rotation.set(0, -0.08, 0);
-  robotGroup.add(rightEyeBorder);
-
-  // Eyelids (sliding hemispherical caps parented to cranium)
-  const lidRadius = eyeRadius + 0.015;
-  const upperLidGeo = new THREE.SphereGeometry(lidRadius, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
-  const lowerLidGeo = new THREE.SphereGeometry(lidRadius, 32, 32, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
-
-  // Left Eye Eyelids
-  const leftLids = new THREE.Group();
-  leftLids.position.copy(leftEyeCenter);
-  leftLids.rotation.set(0, 0.08, 0);
-  robotGroup.add(leftLids);
-
-  leftUpperLid = new THREE.Mesh(upperLidGeo, whiteGlossyMat);
-  leftUpperLid.rotation.x = -1.4; // Open state
-  leftLids.add(leftUpperLid);
-
-  leftLowerLid = new THREE.Mesh(lowerLidGeo, whiteGlossyMat);
-  leftLowerLid.rotation.x = 1.4; // Open state
-  leftLids.add(leftLowerLid);
-
-  // Right Eye Eyelids
-  const rightLids = new THREE.Group();
-  rightLids.position.copy(rightEyeCenter);
-  rightLids.rotation.set(0, -0.08, 0);
-  robotGroup.add(rightLids);
-
-  rightUpperLid = new THREE.Mesh(upperLidGeo, whiteGlossyMat);
-  rightUpperLid.rotation.x = -1.4; // Open state
-  rightLids.add(rightUpperLid);
-
-  rightLowerLid = new THREE.Mesh(lowerLidGeo, whiteGlossyMat);
-  rightLowerLid.rotation.x = 1.4; // Open state
-  rightLids.add(rightLowerLid);
-
-  // --- 6. DARK CARBON NECK & COLLAR PLATE ---
-  // Neck cylinder joint
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.44, 0.85, 32), darkMetalMat);
-  neck.position.set(0, -1.05, -0.08);
-  neck.castShadow = true;
-  robotGroup.add(neck);
-
-  // Glowing indicator details on front neck (lime cylinders/boxes)
-  const neckGlowL = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.25, 0.035), glowingGreenMat);
-  neckGlowL.position.set(-0.16, -0.98, 0.28);
-  neckGlowL.rotation.set(0.1, -0.15, 0);
-  robotGroup.add(neckGlowL);
-
-  const neckGlowR = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.25, 0.035), glowingGreenMat);
-  neckGlowR.position.set(0.16, -0.98, 0.28);
-  neckGlowR.rotation.set(0.1, 0.15, 0);
-  robotGroup.add(neckGlowR);
-
-  // Collar ring base plate
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.18, 16, 64), whiteGlossyMat);
-  collar.rotation.x = Math.PI / 2;
-  collar.position.set(0, -1.45, -0.1);
-  collar.scale.set(1.0, 0.9, 0.45);
-  collar.castShadow = true;
-  collar.receiveShadow = true;
-  robotGroup.add(collar);
-
-  const collarRing = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.03, 8, 48), glowingGreenMat);
-  collarRing.rotation.x = Math.PI / 2;
-  collarRing.position.set(0, -1.25, -0.08);
-  robotGroup.add(collarRing);
-
-  // Position recruiter head centered on coordinates
+  // Position recruiter head group centered on coordinates initially
   robotGroup.position.set(0, -0.3, 0);
+
+  const loader = new THREE.GLTFLoader();
+  if (typeof MeshoptDecoder !== 'undefined') {
+    loader.setMeshoptDecoder(MeshoptDecoder);
+  }
+  loader.load('nexthire-robot.glb', function (gltf) {
+    const model = gltf.scene;
+
+    // Explicitly set model to be visible
+    model.visible = true;
+
+    // Force matrix update to get correct bounding boxes
+    model.updateMatrixWorld(true);
+
+    let meshCount = 0;
+
+    // Traverse to configure visibility, shadows, culling, and materials
+    model.traverse(function (child) {
+      if (child.isMesh) {
+        meshCount++;
+        child.visible = true;
+        child.castShadow = true;
+        child.receiveShadow = true;
+        child.frustumCulled = false; // Disable frustum culling to prevent model disappearing
+
+        if (child.material) {
+          child.material.visible = true;
+          child.material.depthWrite = true;
+          
+          // Ensure materials are not completely transparent or dark
+          if (child.material.opacity === 0) {
+            child.material.opacity = 1.0;
+          }
+          if (child.material.metalness !== undefined && child.material.metalness > 0.9) {
+            child.material.metalness = 0.8; // Cap metalness to ensure it reflects ambient light nicely without env map
+          }
+          child.material.needsUpdate = true;
+        }
+      }
+    });
+
+    // Calculate dimensions
+    const box = new THREE.Box3().setFromObject(model);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+
+    // Auto-normalize scale
+    const targetHeight = 3.0;
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = targetHeight / (maxDim || 1);
+
+    // Center model inside its container
+    model.position.x = -center.x;
+    model.position.y = -center.y;
+    model.position.z = -center.z;
+
+    // Apply Y-axis rotation offset to face the camera
+    model.rotation.y = GLB_ROTATION_Y;
+
+    const modelContainer = new THREE.Group();
+    modelContainer.add(model);
+    modelContainer.scale.set(scale, scale, scale);
+
+    // Add to main centerpiece group
+    robotGroup.add(modelContainer);
+
+    // Align camera view target
+    camera.lookAt(robotGroup.position);
+
+    // Print detailed debug information to console
+    console.log('--- GLB Loader Debug Information ---');
+    console.log('GLB loaded successfully: true');
+    console.log('Mesh count:', meshCount);
+    console.log('Bounding box size: Width = ' + size.x.toFixed(3) + ', Height = ' + size.y.toFixed(3) + ', Depth = ' + size.z.toFixed(3));
+    console.log('Final scale applied:', scale);
+    console.log('Final position applied: X = ' + model.position.x.toFixed(3) + ', Y = ' + model.position.y.toFixed(3) + ', Z = ' + model.position.z.toFixed(3));
+
+    // Print scene hierarchy
+    let hierarchy = '';
+    function getHierarchy(node, depth = 0) {
+      hierarchy += '  '.repeat(depth) + '└─ ' + node.name + ' (' + node.type + ')\n';
+      node.children.forEach(c => getHierarchy(c, depth + 1));
+    }
+    getHierarchy(model);
+    console.log('Scene hierarchy:\n' + hierarchy);
+
+  }, function (xhr) {
+    if (xhr.lengthComputable) {
+      const percent = (xhr.loaded / xhr.total) * 100;
+      console.log('GLB Loading: ' + percent.toFixed(2) + '%');
+    }
+  }, function (error) {
+    console.error('--- GLB Loader Debug Information ---');
+    console.error('GLB loaded successfully: false');
+    console.error('Error details:', error);
+  });
 }
 
 // --- WEBGL FLOATING OBJECTS (Unicorn Studio inspired) ---
@@ -666,13 +483,13 @@ function onMouseMove(e) {
   mouseX = (e.clientX / window.innerWidth) - 0.5;
   mouseY = (e.clientY / window.innerHeight) - 0.5;
 
-  // Head target rotation limits (clamped for a natural neck rotation)
-  targetHeadRotY = mouseX * 0.35;
-  targetHeadRotX = mouseY * 0.22;
+  // Head target rotation limits (max Y: 30° / ~0.52 rad, max X: 15° / ~0.26 rad)
+  targetHeadRotY = mouseX * 1.04;  // 0.5 * 1.04 = 0.52 rad (30°)
+  targetHeadRotX = mouseY * 0.52;  // 0.5 * 0.52 = 0.26 rad (15°)
 
   // Eye tracking limits (tighter boundaries for realism)
-  targetEyeRotY = mouseX * 0.26;
-  targetEyeRotX = mouseY * 0.16;
+  targetEyeRotY = mouseX * 0.35;
+  targetEyeRotX = mouseY * 0.22;
 }
 
 // --- ANIMATION GRAPHICS FRAME TICK ---
@@ -683,15 +500,25 @@ function animate() {
   const dt = (now - lastTime) * 0.001;
   lastTime = now;
 
-  
-
   const time = now * 0.001;
 
-  // 1. Head Rotation interpolation (Head follows mouse)
-  robotGroup.rotation.y += (targetHeadRotY - robotGroup.rotation.y) * 0.06;
-  robotGroup.rotation.x += (targetHeadRotX - robotGroup.rotation.x) * 0.06;
+  // 1. Head Rotation interpolation (Head follows mouse + subtle breathing + micro-movements)
+  const breathingY = Math.sin(time * 0.8) * 0.03; // Subtle left-right sway
+  const breathingX = Math.cos(time * 1.2) * 0.02;  // Subtle up-down nod
 
-  // 2. Eyeball tracking interpolation (Eyes follows mouse)
+  // Micro head movements (simulating tiny involuntary head tremors/adjustments)
+  const microY = Math.sin(time * 4.5) * 0.004 + Math.cos(time * 8.0) * 0.002;
+  const microX = Math.cos(time * 5.2) * 0.003 + Math.sin(time * 9.5) * 0.0015;
+
+  // Combine target rotation + breathing + micro movements
+  const targetY = targetHeadRotY + breathingY + microY;
+  const targetX = targetHeadRotX + breathingX + microX;
+
+  // Smooth lerp/damping
+  robotGroup.rotation.y += (targetY - robotGroup.rotation.y) * 0.05;
+  robotGroup.rotation.x += (targetX - robotGroup.rotation.x) * 0.05;
+
+  // 2. Eyeball tracking interpolation (Dummy eyes follow mouse)
   leftEyeball.rotation.y += (targetEyeRotY - leftEyeball.rotation.y) * 0.08;
   leftEyeball.rotation.x += (targetEyeRotX - leftEyeball.rotation.x) * 0.08;
   
