@@ -1,0 +1,17 @@
+/* --- Standalone Smoky Fluid Cursor Overlay Styling --- */
+
+#fluid-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none; /* Keeps all click/hover interactions functional on elements underneath */
+  z-index: 99999;       /* Keeps it on top of all page elements, including headers and overlays */
+  mix-blend-mode: screen; /* Smooth blending with background dark colors */
+}
+
+#fluid {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
